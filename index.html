@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Net Worth Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0d0d0d; color: #e0e0e0; font-family: monospace; min-height: 100vh; padding: 32px 16px; }
+    h1 { font-size: 28px; font-weight: 700; color: #fff; letter-spacing: -1px; }
+    .subtitle { color: #00FFB2; font-size: 11px; letter-spacing: 3px; margin-bottom: 6px; }
+    .header { margin-bottom: 32px; }
+
+    /* Summary cards */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .card { background: #141414; border: 1px solid #1f1f1f; border-radius: 10px; padding: 18px 20px; }
+    .card-label { color: #555; font-size: 11px; letter-spacing: 1px; margin-bottom: 8px; }
+    .card-value { font-size: 18px; font-weight: bold; }
+
+    /* Layout */
+    .main-grid { display: grid; grid-template-columns: 1fr 280px; gap: 20px; align-items: start; }
+    @media (max-width: 700px) { .main-grid { grid-template-columns: 1fr; } }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .tab { cursor: pointer; padding: 8px 18px; border-radius: 6px; border: none; font-family: monospace; font-size: 12px; letter-spacing: 1px; transition: all 0.2s; }
+    .tab.active { background: #00FFB2; color: #000; font-weight: bold; }
+    .tab.inactive { background: #1a1a1a; color: #555; }
+    .tab.inactive:hover { color: #00FFB2; background: #1f1f1f; }
+
+    /* Table rows */
+    .row-3 { display: grid; grid-template-columns: 2fr 1fr 36px; gap: 8px; margin-bottom: 8px; }
+    .row-4 { display: grid; grid-template-columns: 2fr 1fr 1fr 36px; gap: 8px; margin-bottom: 8px; }
+    .col-label { color: #555; font-size: 11px; letter-spacing: 1px; margin-bottom: 4px; display: block; }
+
+    input { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; color: #e0e0e0; padding: 8px 10px; font-size: 13px; font-family: monospace; outline: none; width: 100%; transition: border-color 0.2s; }
+    input:focus { border-color: #00FFB2; }
+    input[type=number]::-webkit-inner-spin-button { opacity: 0.3; }
+
+    .btn-remove { background: none; border: 1px solid #2a2a2a; color: #555; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 12px; transition: all 0.2s; }
+    .btn-remove:hover { border-color: #FF6B6B; color: #FF6B6B; }
+    .btn-add { background: none; border: 1px dashed #2a2a2a; color: #555; border-radius: 6px; cursor: pointer; padding: 8px 14px; font-family: monospace; font-size: 12px; transition: all 0.2s; width: 100%; margin-top: 4px; }
+    .btn-add:hover { border-color: #00FFB2; color: #00FFB2; }
+
+    /* Breakdown */
+    .breakdown { margin-top: 24px; }
+    .breakdown-label { color: #555; font-size: 11px; letter-spacing: 1px; margin-bottom: 12px; }
+    .breakdown-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .breakdown-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+    .breakdown-name { flex: 1; font-size: 13px; }
+    .breakdown-val { color: #aaa; font-size: 12px; }
+    .breakdown-pct { font-size: 12px; width: 50px; text-align: right; }
+    .breakdown-bar-bg { width: 80px; height: 4px; background: #1f1f1f; border-radius: 2px; }
+    .breakdown-bar-fill { height: 100%; border-radius: 2px; }
+    .breakdown-total { border-top: 1px solid #1f1f1f; margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between; }
+
+    .subtotal { margin-top: 16px; padding: 12px 16px; background: #141414; border: 1px solid #1f1f1f; border-radius: 8px; display: flex; justify-content: space-between; }
+
+    /* Right panel */
+    .right-panel { display: flex; flex-direction: column; gap: 16px; }
+    .stat-card { background: #141414; border: 1px solid #1f1f1f; border-radius: 10px; padding: 18px 20px; }
+    .stat-card-center { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+    .legend-label { font-size: 12px; flex: 1; }
+    .legend-val { font-size: 12px; }
+
+    .pct-bar-bg { height: 6px; background: #1f1f1f; border-radius: 3px; }
+    .pct-bar-fill { height: 100%; border-radius: 3px; background: #00FFB2; transition: width 0.4s; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body>
+  <div style="max-width:860px;margin:0 auto;">
+    <div class="header">
+      <div class="subtitle">FINANCIAL DASHBOARD</div>
+      <h1>Net Worth Calculator</h1>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="cards">
+      <div class="card"><div class="card-label">NET WORTH</div><div class="card-value" id="card-networth" style="color:#00FFB2">$0</div></div>
+      <div class="card"><div class="card-label">TOTAL ASSETS</div><div class="card-value" id="card-assets" style="color:#74B9FF">$0</div></div>
+      <div class="card"><div class="card-label">STOCK PORTFOLIO</div><div class="card-value" id="card-stocks" style="color:#00FFB2">$0</div></div>
+      <div class="card"><div class="card-label">LIABILITIES</div><div class="card-value" id="card-liabilities" style="color:#FF6B6B">$0</div></div>
+    </div>
+
+    <div class="main-grid">
+      <!-- Left Panel -->
+      <div>
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('stocks')">STOCKS</button>
+          <button class="tab inactive" onclick="switchTab('assets')">ASSETS</button>
+          <button class="tab inactive" onclick="switchTab('liabilities')">LIABILITIES</button>
+        </div>
+
+        <!-- Stocks -->
+        <div id="tab-stocks" class="tab-content active">
+          <div class="row-4" style="margin-bottom:4px;">
+            <span class="col-label">TICKER / NAME</span>
+            <span class="col-label">SHARES</span>
+            <span class="col-label">PRICE ($)</span>
+            <span></span>
+          </div>
+          <div id="stocks-rows"></div>
+          <button class="btn-add" onclick="addStock()">+ Add Stock</button>
+          <div id="stock-breakdown" class="breakdown"></div>
+        </div>
+
+        <!-- Assets -->
+        <div id="tab-assets" class="tab-content">
+          <div class="row-3" style="margin-bottom:4px;">
+            <span class="col-label">ASSET NAME</span>
+            <span class="col-label">VALUE ($)</span>
+            <span></span>
+          </div>
+          <div id="assets-rows"></div>
+          <button class="btn-add" onclick="addAsset()">+ Add Asset</button>
+          <div id="assets-subtotal"></div>
+        </div>
+
+        <!-- Liabilities -->
+        <div id="tab-liabilities" class="tab-content">
+          <div class="row-3" style="margin-bottom:4px;">
+            <span class="col-label">LIABILITY NAME</span>
+            <span class="col-label">AMOUNT ($)</span>
+            <span></span>
+          </div>
+          <div id="liabilities-rows"></div>
+          <button class="btn-add" onclick="addLiability()">+ Add Liability</button>
+          <div id="liabilities-subtotal"></div>
+        </div>
+      </div>
+
+      <!-- Right Panel -->
+      <div class="right-panel">
+        <div class="stat-card stat-card-center">
+          <div class="col-label" style="text-align:center;">ALLOCATION</div>
+          <svg id="donut" width="160" height="160"></svg>
+          <div style="width:100%;" id="donut-legend"></div>
+        </div>
+        <div class="stat-card">
+          <div class="col-label">STOCKS % OF ASSETS</div>
+          <div id="stock-pct" style="font-size:22px;font-weight:bold;color:#00FFB2;margin-bottom:8px;">0.0%</div>
+          <div class="pct-bar-bg"><div class="pct-bar-fill" id="stock-pct-bar" style="width:0%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="col-label">DEBT-TO-ASSET RATIO</div>
+          <div id="debt-ratio" style="font-size:22px;font-weight:bold;color:#FFD93D;">—</div>
+          <div style="font-size:11px;color:#444;margin-top:4px;">liabilities / assets</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const COLORS = ["#00FFB2","#FF6B6B","#FFD93D","#A29BFE","#FD79A8","#74B9FF","#55EFC4","#FDCB6E","#E17055","#6BCB77"];
+  let nextId = 1;
+  const uid = () => nextId++;
+
+  let stocks = [{ id: uid(), name: "", shares: "", price: "" }];
+  let assets = [{ id: uid(), name: "", value: "" }];
+  let liabilities = [{ id: uid(), name: "", value: "" }];
+
+  const fmt = (v) => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(v||0);
+  const fmtP = (v) => v.toFixed(1) + "%";
+
+  function switchTab(tab) {
+    ["stocks","assets","liabilities"].forEach(t => {
+      document.getElementById("tab-" + t).classList.toggle("active", t === tab);
+      const btns = document.querySelectorAll(".tab");
+      btns.forEach(b => {
+        if (b.textContent.toLowerCase().startsWith(t)) {
+          b.classList.toggle("active", t === tab);
+          b.classList.toggle("inactive", t !== tab);
+        }
+      });
+    });
+  }
+
+  function renderStocks() {
+    const container = document.getElementById("stocks-rows");
+    container.innerHTML = "";
+    stocks.forEach(s => {
+      const row = document.createElement("div");
+      row.className = "row-4";
+      row.innerHTML = `
+        <input placeholder="e.g. AAPL" value="${s.name}" oninput="updateStock(${s.id},'name',this.value)" />
+        <input type="number" min="0" placeholder="0" value="${s.shares}" oninput="updateStock(${s.id},'shares',this.value)" />
+        <input type="number" min="0" placeholder="0.00" value="${s.price}" oninput="updateStock(${s.id},'price',this.value)" />
+        <button class="btn-remove" onclick="removeStock(${s.id})">✕</button>
+      `;
+      container.appendChild(row);
+    });
+    renderBreakdown();
+    recalc();
+  }
+
+  function renderAssets() {
+    const container = document.getElementById("assets-rows");
+    container.innerHTML = "";
+    assets.forEach(a => {
+      const row = document.createElement("div");
+      row.className = "row-3";
+      row.innerHTML = `
+        <input placeholder="e.g. Real Estate, Savings" value="${a.name}" oninput="updateAsset(${a.id},'name',this.value)" />
+        <input type="number" min="0" placeholder="0" value="${a.value}" oninput="updateAsset(${a.id},'value',this.value)" />
+        <button class="btn-remove" onclick="removeAsset(${a.id})">✕</button>
+      `;
+      container.appendChild(row);
+    });
+    recalc();
+  }
+
+  function renderLiabilities() {
+    const container = document.getElementById("liabilities-rows");
+    container.innerHTML = "";
+    liabilities.forEach(l => {
+      const row = document.createElement("div");
+      row.className = "row-3";
+      row.innerHTML = `
+        <input placeholder="e.g. Mortgage, Student Loan" value="${l.name}" oninput="updateLiability(${l.id},'name',this.value)" />
+        <input type="number" min="0" placeholder="0" value="${l.value}" oninput="updateLiability(${l.id},'value',this.value)" />
+        <button class="btn-remove" onclick="removeLiability(${l.id})">✕</button>
+      `;
+      container.appendChild(row);
+    });
+    recalc();
+  }
+
+  function addStock() { stocks.push({id:uid(),name:"",shares:"",price:""}); renderStocks(); }
+  function addAsset() { assets.push({id:uid(),name:"",value:""}); renderAssets(); }
+  function addLiability() { liabilities.push({id:uid(),name:"",value:""}); renderLiabilities(); }
+
+  function removeStock(id) { if(stocks.length>1) stocks=stocks.filter(s=>s.id!==id); renderStocks(); }
+  function removeAsset(id) { if(assets.length>1) assets=assets.filter(a=>a.id!==id); renderAssets(); }
+  function removeLiability(id) { if(liabilities.length>1) liabilities=liabilities.filter(l=>l.id!==id); renderLiabilities(); }
+
+  function updateStock(id,field,val) { stocks=stocks.map(s=>s.id===id?{...s,[field]:val}:s); renderBreakdown(); recalc(); }
+  function updateAsset(id,field,val) { assets=assets.map(a=>a.id===id?{...a,[field]:val}:a); recalc(); }
+  function updateLiability(id,field,val) { liabilities=liabilities.map(l=>l.id===id?{...l,[field]:val}:l); recalc(); }
+
+  function renderBreakdown() {
+    const breakdown = stocks
+      .filter(s=>s.name&&parseFloat(s.shares)>0&&parseFloat(s.price)>0)
+      .map((s,i)=>({...s,total:(parseFloat(s.shares)||0)*(parseFloat(s.price)||0),color:COLORS[i%COLORS.length]}));
+    const stockTotal = breakdown.reduce((sum,s)=>sum+s.total,0);
+    const container = document.getElementById("stock-breakdown");
+    if (!breakdown.length) { container.innerHTML=""; return; }
+    container.innerHTML = `<div class="breakdown-label">PORTFOLIO BREAKDOWN</div>` +
+      breakdown.map(s=>`
+        <div class="breakdown-row">
+          <div class="breakdown-dot" style="background:${s.color}"></div>
+          <div class="breakdown-name">${s.name||"—"}</div>
+          <div class="breakdown-val">${fmt(s.total)}</div>
+          <div class="breakdown-pct" style="color:${s.color}">${stockTotal>0?fmtP(s.total/stockTotal*100):"—"}</div>
+          <div class="breakdown-bar-bg"><div class="breakdown-bar-fill" style="width:${stockTotal>0?s.total/stockTotal*100:0}%;background:${s.color}"></div></div>
+        </div>
+      `).join("") +
+      `<div class="breakdown-total"><span>Portfolio Total</span><span style="color:#00FFB2;font-weight:bold">${fmt(stockTotal)}</span></div>`;
+  }
+
+  function drawDonut(stockTotal, otherTotal, liabTotal) {
+    const svg = document.getElementById("donut");
+    const size = 160, cx = 80, cy = 80, r = 60;
+    const total = stockTotal + otherTotal + liabTotal;
+    const segments = [
+      {value:stockTotal,color:"#00FFB2",label:"Stocks"},
+      {value:otherTotal,color:"#74B9FF",label:"Other Assets"},
+      {value:liabTotal,color:"#FF6B6B",label:"Liabilities"},
+    ].filter(s=>s.value>0);
+
+    const netWorth = stockTotal + otherTotal - liabTotal;
+    const nwColor = netWorth >= 0 ? "#00FFB2" : "#FF6B6B";
+
+    if (!total) {
+      svg.innerHTML = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#2a2a2a" stroke-width="3"/>
+        <text x="${cx}" y="${cy+4}" text-anchor="middle" fill="#555" font-size="12" font-family="monospace">No data</text>`;
+      return;
+    }
+
+    let paths = "";
+    let cum = 0;
+    segments.forEach(seg => {
+      const pct = seg.value / total;
+      const a1 = cum * 2 * Math.PI - Math.PI/2;
+      cum += pct;
+      const a2 = cum * 2 * Math.PI - Math.PI/2;
+      const x1 = cx + r*Math.cos(a1), y1 = cy + r*Math.sin(a1);
+      const x2 = cx + r*Math.cos(a2), y2 = cy + r*Math.sin(a2);
+      const large = pct > 0.5 ? 1 : 0;
+      paths += `<path d="M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z" fill="${seg.color}" opacity="0.9"/>`;
+    });
+
+    svg.innerHTML = paths +
+      `<circle cx="${cx}" cy="${cy}" r="38" fill="#111"/>
+       <text x="${cx}" y="${cy-6}" text-anchor="middle" fill="#fff" font-size="11" font-family="monospace">NET WORTH</text>
+       <text x="${cx}" y="${cy+12}" text-anchor="middle" fill="${nwColor}" font-size="10" font-weight="bold" font-family="monospace">${netWorth>=0?"+":""}${fmt(netWorth)}</text>`;
+
+    document.getElementById("donut-legend").innerHTML = [
+      {label:"Stocks",value:stockTotal,color:"#00FFB2"},
+      {label:"Other Assets",value:otherTotal,color:"#74B9FF"},
+      {label:"Liabilities",value:liabTotal,color:"#FF6B6B"},
+    ].map(s=>`<div class="legend-row"><div class="legend-dot" style="background:${s.color}"></div><span class="legend-label">${s.label}</span><span class="legend-val" style="color:${s.color}">${fmt(s.value)}</span></div>`).join("");
+  }
+
+  function recalc() {
+    const stockTotal = stocks.reduce((s,st)=>s+(parseFloat(st.shares)||0)*(parseFloat(st.price)||0),0);
+    const otherTotal = assets.reduce((s,a)=>s+(parseFloat(a.value)||0),0);
+    const liabTotal = liabilities.reduce((s,l)=>s+(parseFloat(l.value)||0),0);
+    const totalAssets = stockTotal + otherTotal;
+    const netWorth = totalAssets - liabTotal;
+    const portfolioPct = totalAssets > 0 ? (stockTotal/totalAssets)*100 : 0;
+    const debtRatio = totalAssets > 0 ? (liabTotal/totalAssets)*100 : null;
+
+    const nwColor = netWorth >= 0 ? "#00FFB2" : "#FF6B6B";
+    document.getElementById("card-networth").textContent = fmt(netWorth);
+    document.getElementById("card-networth").style.color = nwColor;
+    document.getElementById("card-assets").textContent = fmt(totalAssets);
+    document.getElementById("card-stocks").textContent = fmt(stockTotal);
+    document.getElementById("card-liabilities").textContent = fmt(liabTotal);
+
+    document.getElementById("stock-pct").textContent = fmtP(portfolioPct);
+    document.getElementById("stock-pct-bar").style.width = portfolioPct + "%";
+
+    const drEl = document.getElementById("debt-ratio");
+    if (debtRatio !== null) {
+      drEl.textContent = fmtP(debtRatio);
+      drEl.style.color = debtRatio > 50 ? "#FF6B6B" : "#FFD93D";
+    } else {
+      drEl.textContent = "—";
+      drEl.style.color = "#FFD93D";
+    }
+
+    // Assets subtotal
+    const asSub = document.getElementById("assets-subtotal");
+    asSub.innerHTML = otherTotal > 0 ? `<div class="subtotal"><span>Other Assets Total</span><span style="color:#74B9FF;font-weight:bold">${fmt(otherTotal)}</span></div>` : "";
+    const liabSub = document.getElementById("liabilities-subtotal");
+    liabSub.innerHTML = liabTotal > 0 ? `<div class="subtotal"><span>Total Liabilities</span><span style="color:#FF6B6B;font-weight:bold">${fmt(liabTotal)}</span></div>` : "";
+
+    drawDonut(stockTotal, otherTotal, liabTotal);
+  }
+
+  // Init
+  renderStocks();
+  renderAssets();
+  renderLiabilities();
+</script>
+</body>
+</html>
